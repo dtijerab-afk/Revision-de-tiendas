@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Operativo - Megatiendas Regional Barranquilla</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#0b1120',
+                        },
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c3d66',
+                        },
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    },
+                    fontSize: {
+                        '2xl': '1.5rem',
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- SheetJS (Excel) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/2.8.0/xlsx.full.min.js"></script>
+    
+    <!-- html2canvas + jsPDF (PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-dark: #0b1120;
+            --primary-blue: #2a5a8f;
+            --accent-blue: #4a9eff;
+            --light-blue: #5ab3ff;
+            --surface: rgba(26, 48, 80, 0.4);
+            --surface-hover: rgba(26, 48, 80, 0.6);
+        }
+        
+        html, body {
+            background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #0c1a30 100%);
+            color: #f1f5f9;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Glassmorphism Base */
+        .glass {
+            background: var(--surface);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .glass:hover {
+            background: var(--surface-hover);
+            border-color: rgba(74, 158, 255, 0.4);
+        }
+        
+        .glass-card {
+            box-shadow: 
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+                0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Animaciones */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(74, 158, 255, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(74, 158, 255, 0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease forwards;
+        }
+        
+        .animate-slide-up {
+            animation: slideUp 0.4s ease forwards;
+        }
+        
+        .animate-pulse-glow {
+            animation: pulse-glow 2s infinite;
+        }
+        
+        /* Componentes específicos */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--light-blue) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(74, 158, 255, 0.4);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--light-blue);
+            border: 1px solid var(--accent-blue);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(74, 158, 255, 0.1);
+            border-color: var(--light-blue);
+        }
+        
+        .btn-secondary.bg-yellow-600 {
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            color: white;
+            border: 1px solid #fbbf24;
+        }
+        
+        .btn-secondary.bg-yellow-600:hover {
+            background: linear-gradient(135deg, #b45309, #d97706);
+            border-color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+        
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: #fca5a5;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, rgba(26, 48, 80, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 600px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.4s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .modal-content::-webkit-scrollbar-track {
+            background: rgba(26, 48, 80, 0.2);
+            border-radius: 10px;
+        }
+        
+        .modal-content::-webkit-scrollbar-thumb {
+            background: rgba(74, 158, 255, 0.5);
+            border-radius: 10px;
+        }
+        
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(74, 158, 255, 0.7);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--light-blue);
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(74, 158, 255, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            background: rgba(15, 23, 42, 0.8);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .kanban-column {
+            background: rgba(26, 48, 80, 0.3);
+            border: 1px solid rgba(74, 158, 255, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+            min-height: 600px;
+            transition: all 0.3s ease;
+        }
+        
+        .kanban-column:hover {
+            background: rgba(26, 48, 80, 0.5);
+            border-color: rgba(74, 158, 255, 0.3);
+        }
+        
+        .kanban-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(74, 158, 255, 0.2);
+        }
+        
+        .kanban-header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .kanban-counter {
+            background: linear-gradient(135deg, var(--accent-blue), var(--light-blue));
+            color: white;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        
+        .task-card {
+            background: var(--surface);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .task-card:active {
+            cursor: grabbing;
+        }
+        
+        .task-card:hover {
+            background: var(--surface-hover);
+            border-color: var(--accent-blue);
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .task-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            color: var(--light-blue);
+            word-break: break-word;
+        }
+        
+        .task-meta {
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .task-meta span {
+            background: rgba(74, 158, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border-left: 2px solid var(--accent-blue);
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        
+        .task-btn {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            flex: 1;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(74, 158, 255, 0.9) 0%, rgba(90, 179, 255, 0.9) 100%);
+            color: white;
+            padding: 14px 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--light-blue);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+            z-index: 2000;
+            font-weight: 600;
+            max-width: 400px;
+        }
+        
+        .notification.error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(252, 165, 165, 0.1) 100%);
+            border-left-color: #fca5a5;
+        }
+        
+        .notification.success {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(134, 239, 172, 0.1) 100%);
+            border-left-color: #86efac;
+        }
+        
+        .dynamic-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .dynamic-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(74, 158, 255, 0.15);
+        }
+        
+        .dynamic-item input[type="checkbox"] {
+            margin-top: 4px;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+        
+        .dynamic-item textarea {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(74, 158, 255, 0.2);
+            padding: 8px;
+            border-radius: 6px;
+            color: #f1f5f9;
+            font-size: 0.9rem;
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        .dynamic-item-delete {
+            padding: 6px 10px;
+            margin-top: 2px;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(74, 158, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent-blue);
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .kanban-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .kanban-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+            
+            .btn-primary, .btn-secondary {
+                padding: 10px 16px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="glass glass-card border-b border-primary-700/30 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="bi bi-speedometer2 text-2xl text-primary-400"></i>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent">
+                            Dashboard Operativo
+                        </h1>
+                        <p class="text-xs sm:text-sm text-gray-400">
+                            Regional Barranquilla | Megatiendas
+                            <span id="firebaseStatus" class="ml-2">
+                                <i class="bi bi-cloud-slash text-red-400"></i> Offline
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+                    <button class="btn-primary" onclick="window.openTaskModal()">
+                        <i class="bi bi-plus-circle"></i> Nueva Tarea
+                    </button>
+                    <button class="btn-secondary" onclick="window.toggleVoiceInput()" id="voiceBtn" title="Entrada por voz">
+                        <i class="bi bi-mic"></i> <span class="hidden sm:inline">Voz</span>
+                    </button>
+                    <button class="btn-secondary" onclick="window.syncCalendar()" id="syncBtn" title="Sincronizar con Firestore">
+                        <i class="bi bi-arrow-clockwise"></i> <span class="hidden sm:inline">Sincronizar</span>
+                    </button>
+                    <button class="btn-secondary bg-yellow-600 hover:bg-yellow-700 border-yellow-500" onclick="window.openFirebaseConfig()" title="Configurar Firebase">
+                        <i class="bi bi-gear-fill"></i> <span class="hidden sm:inline">Firebase</span>
+                    </button>
+                    <div class="dropdown relative">
+                        <button class="btn-secondary" id="exportBtn" title="Exportar datos">
+                            <i class="bi bi-download"></i> <span class="hidden sm:inline">Exportar</span>
+                        </button>
+                        <div class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-dark-800 border border-primary-700/30 rounded-lg shadow-lg z-50">
+                            <button class="block w-full text-left px-4 py-2 hover:bg-primary-700/20" onclick="window.exportToExcel()">
+                                <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+                            </button>
+                            <button class="block w-full text-left px-4 py-2 hover:bg-primary-700/20" onclick="window.exportToPDF()">
+                                <i class="bi bi-file-earmark-pdf"></i> Exportar a PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Kanban Board -->
+    <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div class="kanban-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Reuniones -->
+            <div class="kanban-column">
+                <div class="kanban-header">
+                    <h3>👥 REUNIONES</h3>
+                    <span class="kanban-counter" id="counter-reuniones">0</span>
+                </div>
+                <div class="space-y-3" id="column-reuniones"></div>
+            </div>
+
+            <!-- Visita Tienda -->
+            <div class="kanban-column">
+                <div class="kanban-header">
+                    <h3>🚗 VISITA TIENDA</h3>
+                    <span class="kanban-counter" id="counter-visita">0</span>
+                </div>
+                <div class="space-y-3" id="column-visita"></div>
+            </div>
+
+            <!-- Seguimiento UEN -->
+            <div class="kanban-column">
+                <div class="kanban-header">
+                    <h3>📦 SEGUIMIENTO UEN</h3>
+                    <span class="kanban-counter" id="counter-seguimiento">0</span>
+                </div>
+                <div class="space-y-3" id="column-seguimiento"></div>
+            </div>
+
+            <!-- Ideas -->
+            <div class="kanban-column">
+                <div class="kanban-header">
+                    <h3>💡 IDEAS</h3>
+                    <span class="kanban-counter" id="counter-ideas">0</span>
+                </div>
+                <div class="space-y-3" id="column-ideas"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Configuración Firebase -->
+    <div class="modal-overlay" id="firebaseModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-primary-300">
+                    <i class="bi bi-gear"></i> Configurar Firebase
+                </h2>
+                <button onclick="window.closeFirebaseConfig()" class="text-gray-400 hover:text-primary-300 transition">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+
+            <div class="bg-blue-950/30 border border-blue-700/30 rounded-lg p-4 mb-6">
+                <p class="text-sm text-blue-200 mb-2">
+                    <i class="bi bi-info-circle"></i> <strong>Para sincronizar con Firebase:</strong>
+                </p>
+                <ol class="text-xs text-gray-300 space-y-1 ml-4 list-decimal">
+                    <li>Ve a <a href="https://console.firebase.google.com" target="_blank" class="text-primary-400 hover:underline">Firebase Console</a></li>
+                    <li>Crea un nuevo proyecto o usa uno existente</li>
+                    <li>Ve a Configuración del proyecto → Aplicaciones web</li>
+                    <li>Copia las credenciales debajo</li>
+                    <li>Configura Firestore en "Crear base de datos"</li>
+                    <li>Reemplaza las reglas con las que se muestran abajo</li>
+                </ol>
+            </div>
+
+            <form id="firebaseConfigForm" onsubmit="window.saveFirebaseConfig(event)">
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="text" id="apiKey" placeholder="AIzaSyD..." required>
+                </div>
+                <div class="form-group">
+                    <label for="authDomain">Auth Domain</label>
+                    <input type="text" id="authDomain" placeholder="tu-proyecto.firebaseapp.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="projectId">Project ID</label>
+                    <input type="text" id="projectId" placeholder="tu-proyecto" required>
+                </div>
+                <div class="form-group">
+                    <label for="storageBucket">Storage Bucket</label>
+                    <input type="text" id="storageBucket" placeholder="tu-proyecto.appspot.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="messagingSenderId">Messaging Sender ID</label>
+                    <input type="text" id="messagingSenderId" placeholder="123456789" required>
+                </div>
+                <div class="form-group">
+                    <label for="appId">App ID</label>
+                    <input type="text" id="appId" placeholder="1:123456789:web:abc..." required>
+                </div>
+
+                <div class="bg-gray-900/50 border border-yellow-700/30 rounded-lg p-4 mb-6 mt-6">
+                    <p class="text-xs font-bold text-yellow-300 mb-3">
+                        <i class="bi bi-shield-lock"></i> Reglas de Firestore (Copiar en Firebase Console)
+                    </p>
+                    <pre class="text-xs text-gray-300 overflow-x-auto bg-black/30 p-3 rounded border border-gray-700"><code>rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /tareas/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</code></pre>
+                    <p class="text-xs text-gray-400 mt-2">
+                        ⚠️ <strong>Nota:</strong> Estas son reglas públicas. Para producción, implementa autenticación.
+                    </p>
+                </div>
+
+                <div class="flex gap-3 justify-end">
+                    <button type="button" class="btn-secondary" onclick="window.closeFirebaseConfig()">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn-primary" onclick="window.saveFirebaseConfig()">
+                        <i class="bi bi-check-circle"></i> Guardar Configuración
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Formulario -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-primary-300" id="modalTitle">Nueva Tarea</h2>
+                <button onclick="window.closeTaskModal()" class="text-gray-400 hover:text-primary-300 transition">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+
+            <form id="taskForm" onsubmit="window.handleFormSubmit(event)">
+                <!-- Selector de Tipo (siempre visible) -->
+                <div class="form-group">
+                    <label for="taskType">Tipo de Tarea</label>
+                    <select id="taskType" onchange="window.updateFormFields()" required>
+                        <option value="">-- Seleccionar --</option>
+                        <option value="reuniones">👥 Reunión</option>
+                        <option value="visita">🚗 Visita Tienda</option>
+                        <option value="seguimiento">📦 Seguimiento UEN</option>
+                        <option value="ideas">💡 Idea</option>
+                    </select>
+                </div>
+
+                <!-- Campos dinámicos -->
+                <div id="dynamicFields"></div>
+
+                <!-- Botones -->
+                <div class="flex gap-3 justify-end mt-8">
+                    <button type="button" class="btn-secondary" onclick="window.closeTaskModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i class="bi bi-check-circle"></i> Guardar Tarea
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ========== ESTADO GLOBAL ==========
+        const appState = {
+            tasks: [],
+            currentEditId: null,
+            db: null,
+            firebaseInitialized: false,
+        };
+
+        // Configuración Firebase - REEMPLAZA CON TUS CREDENCIALES
+        // Obtén estas desde: Firebase Console > Proyecto > Configuración > Aplicaciones web
+        const firebaseConfig = {
+            apiKey: localStorage.getItem('firebase_apiKey') || "REEMPLAZA_CON_TU_API_KEY",
+            authDomain: localStorage.getItem('firebase_authDomain') || "REEMPLAZA_CON_TU_AUTH_DOMAIN",
+            projectId: localStorage.getItem('firebase_projectId') || "REEMPLAZA_CON_TU_PROJECT_ID",
+            storageBucket: localStorage.getItem('firebase_storageBucket') || "REEMPLAZA_CON_TU_STORAGE_BUCKET",
+            messagingSenderId: localStorage.getItem('firebase_messagingSenderId') || "REEMPLAZA_CON_TU_MESSAGING_SENDER_ID",
+            appId: localStorage.getItem('firebase_appId') || "REEMPLAZA_CON_TU_APP_ID"
+        };
+
+        let firestoreUnsubscribe = null;
+
+        // ========== INICIALIZACIÓN ==========
+        window.addEventListener('DOMContentLoaded', () => {
+            checkFirebaseConfig();
+            initializeApp();
+            setupExportMenu();
+            loadTasks();
+        });
+
+        function checkFirebaseConfig() {
+            const isConfigured = !firebaseConfig.apiKey.includes('REEMPLAZA_CON');
+            if (!isConfigured) {
+                showNotification('⚠️ Firebase no configurado. Usa el botón Firebase para configurar.', 'error');
+            }
+            updateFirebaseStatus();
+        }
+
+        function updateFirebaseStatus() {
+            const statusEl = document.getElementById('firebaseStatus');
+            if (!statusEl) return;
+
+            if (appState.firebaseInitialized) {
+                statusEl.innerHTML = '<i class="bi bi-cloud-check text-green-400"></i> <span class="text-green-400 text-xs">Sincronizado</span>';
+            } else {
+                statusEl.innerHTML = '<i class="bi bi-cloud-slash text-yellow-400"></i> <span class="text-yellow-400 text-xs">LocalStorage</span>';
+            }
+        }
+
+        function initializeApp() {
+            try {
+                // Cargar configuración de Firebase
+                const apiKey = localStorage.getItem('firebase_apiKey');
+                const authDomain = localStorage.getItem('firebase_authDomain');
+                const projectId = localStorage.getItem('firebase_projectId');
+                
+                // Verificar si Firebase está configurado
+                if (apiKey && !apiKey.includes('REEMPLAZA_CON')) {
+                    // Intentar inicializar Firebase
+                    if (firebase.apps.length === 0) {
+                        firebase.initializeApp({
+                            apiKey: apiKey,
+                            authDomain: authDomain,
+                            projectId: projectId,
+                            storageBucket: localStorage.getItem('firebase_storageBucket'),
+                            messagingSenderId: localStorage.getItem('firebase_messagingSenderId'),
+                            appId: localStorage.getItem('firebase_appId')
+                        });
+                    }
+                    
+                    appState.db = firebase.firestore();
+                    appState.firebaseInitialized = true;
+                    console.log('✓ Firebase inicializado');
+                    setupFirestoreListener();
+                } else {
+                    console.log('Firebase no configurado - usando localStorage');
+                    appState.firebaseInitialized = false;
+                    loadFromLocalStorage();
+                }
+            } catch (err) {
+                console.error('Error inicializando Firebase:', err.message);
+                appState.firebaseInitialized = false;
+                loadFromLocalStorage();
+            }
+            
+            updateFirebaseStatus();
+        }
+
+        function setupFirestoreListener() {
+            if (!appState.firebaseInitialized || !appState.db) {
+                console.log('Firestore no disponible');
+                return;
+            }
+
+            if (firestoreUnsubscribe) {
+                firestoreUnsubscribe();
+            }
+
+            try {
+                firestoreUnsubscribe = appState.db
+                    .collection('tareas')
+                    .where('region', '==', 'Barranquilla')
+                    .onSnapshot(
+                        (snapshot) => {
+                            console.log('✓ Datos sincronizados desde Firestore');
+                            appState.tasks = snapshot.docs.map(doc => ({
+                                id: doc.id,
+                                ...doc.data()
+                            }));
+                            renderBoard();
+                            updateFirebaseStatus();
+                        },
+                        (error) => {
+                            console.warn('Error en listener Firestore:', error.message);
+                            // Mantener los datos de localStorage
+                            updateFirebaseStatus();
+                        }
+                    );
+            } catch (err) {
+                console.error('Error configurando listener:', err);
+            }
+        }
+
+        function setupExportMenu() {
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                this.nextElementSibling.classList.toggle('hidden');
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.dropdown')) {
+                    document.querySelector('.dropdown-menu').classList.add('hidden');
+                }
+            });
+        }
+
+        // ========== GESTIÓN DE TAREAS ==========
+        function loadTasks() {
+            // SIEMPRE cargar primero desde localStorage (garantizado)
+            loadFromLocalStorage();
+            
+            // LUEGO: Si Firebase está disponible, sincronizar datos
+            if (appState.firebaseInitialized) {
+                setupFirestoreListener();
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const stored = localStorage.getItem('megatiendas_tasks');
+                appState.tasks = stored ? JSON.parse(stored) : [];
+                console.log(`✓ Cargadas ${appState.tasks.length} tarea(s) desde localStorage`);
+                renderBoard();
+            } catch (err) {
+                console.error('Error cargando localStorage:', err);
+                appState.tasks = [];
+                renderBoard();
+            }
+        }
+
+        function saveTasks() {
+            if (appState.firebaseInitialized) {
+                saveToFirestore();
+            } else {
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('megatiendas_tasks', JSON.stringify(appState.tasks));
+            console.log('Tareas guardadas en localStorage');
+        }
+
+        function saveToFirestore() {
+            const batch = appState.db.batch();
+            let taskCount = 0;
+
+            appState.tasks.forEach(task => {
+                const docRef = appState.db.collection('tareas').doc(task.id);
+                const taskData = {
+                    ...task,
+                    region: 'Barranquilla',
+                    updatedAt: new Date(),
+                    updatedBy: 'Donald'
+                };
+                batch.set(docRef, taskData, { merge: true });
+                taskCount++;
+            });
+
+            batch.commit()
+                .then(() => {
+                    console.log(`✓ ${taskCount} tarea(s) sincronizada(s) con Firestore`);
+                    appState.lastSyncTime = new Date();
+                    updateSyncStatus();
+                })
+                .catch((error) => {
+                    console.error('Error guardando en Firestore:', error);
+                    // Guardar en localStorage como respaldo
+                    saveToLocalStorage();
+                    showNotification('Sincronización fallida. Guardado localmente.', 'error');
+                });
+        }
+
+        // ========== RENDERIZADO DEL TABLERO ==========
+        function renderBoard() {
+            const columns = {
+                reuniones: document.getElementById('column-reuniones'),
+                visita: document.getElementById('column-visita'),
+                seguimiento: document.getElementById('column-seguimiento'),
+                ideas: document.getElementById('column-ideas')
+            };
+
+            Object.keys(columns).forEach(col => columns[col].innerHTML = '');
+
+            appState.tasks.forEach(task => {
+                const column = columns[task.type];
+                if (column) {
+                    column.appendChild(createTaskCard(task));
+                }
+            });
+
+            updateCounters();
+        }
+
+        function createTaskCard(task) {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+            card.setAttribute('data-task-id', task.id);
+
+            let content = `<div class="task-title">${escapeHtml(task.subject || task.descripcion || task.uen || 'Sin título')}</div>`;
+            content += `<div class="task-meta">`;
+            
+            if (task.fecha) content += `<span><i class="bi bi-calendar"></i> ${task.fecha}</span>`;
+            if (task.tienda) content += `<span><i class="bi bi-shop"></i> ${task.tienda}</span>`;
+            if (task.responsable) content += `<span><i class="bi bi-person"></i> ${task.responsable}</span>`;
+            if (task.area) content += `<span><i class="bi bi-tag"></i> ${task.area}</span>`;
+            
+            content += `</div>`;
+            content += `<div class="task-actions">
+                <button class="btn-secondary task-btn" onclick="window.editTask('${task.id}')">Editar</button>
+                <button class="btn-danger task-btn" onclick="window.deleteTask('${task.id}')">Eliminar</button>
+            </div>`;
+
+            card.innerHTML = content;
+            return card;
+        }
+
+        function updateCounters() {
+            const counts = {
+                reuniones: appState.tasks.filter(t => t.type === 'reuniones').length,
+                visita: appState.tasks.filter(t => t.type === 'visita').length,
+                seguimiento: appState.tasks.filter(t => t.type === 'seguimiento').length,
+                ideas: appState.tasks.filter(t => t.type === 'ideas').length
+            };
+
+            Object.keys(counts).forEach(key => {
+                document.getElementById(`counter-${key}`).textContent = counts[key];
+            });
+        }
+
+        // ========== MODAL Y FORMULARIO ==========
+        function openTaskModal() {
+            appState.currentEditId = null;
+            document.getElementById('taskForm').reset();
+            document.getElementById('modalTitle').textContent = 'Nueva Tarea';
+            document.getElementById('taskModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            appState.currentEditId = null;
+        }
+
+        function updateFormFields() {
+            const type = document.getElementById('taskType').value;
+            const container = document.getElementById('dynamicFields');
+            container.innerHTML = '';
+
+            if (!type) return;
+
+            let html = '';
+
+            switch(type) {
+                case 'reuniones':
+                    html = `
+                        <div class="form-group">
+                            <label for="asunto">Asunto</label>
+                            <input type="text" id="asunto" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fecha">Fecha</label>
+                            <input type="date" id="fecha" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="hora">Hora</label>
+                            <input type="time" id="hora" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="asistentes">Asistentes</label>
+                            <textarea id="asistentes" placeholder="Nombres separados por comas"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Temas a Tratar</label>
+                            <button type="button" class="btn-secondary mb-2" onclick="window.addTheme()">
+                                <i class="bi bi-plus"></i> Agregar Tema
+                            </button>
+                            <div class="dynamic-list" id="themesList"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="decisiones">Decisiones Tomadas</label>
+                            <textarea id="decisiones" placeholder="Resumen de decisiones"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="proximas">Próximas Acciones</label>
+                            <button type="button" class="btn-secondary mb-2" onclick="window.addAction()">
+                                <i class="bi bi-plus"></i> Agregar Acción
+                            </button>
+                            <div class="dynamic-list" id="actionsList"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'visita':
+                    html = `
+                        <div class="form-group">
+                            <label for="tienda">Tienda</label>
+                            <select id="tienda" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Único">Único</option>
+                                <option value="Calle 30">Calle 30</option>
+                                <option value="Soledad">Soledad</option>
+                                <option value="Santo Tomás">Santo Tomás</option>
+                                <option value="Nuestro Atlántico">Nuestro Atlántico</option>
+                                <option value="Alkarawi">Alkarawi</option>
+                                <option value="Boston">Boston</option>
+                                <option value="Villa Campestre">Villa Campestre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fechaVisita">Fecha</label>
+                            <input type="date" id="fechaVisita" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="responsableVisita">Responsable</label>
+                            <input type="text" id="responsableVisita" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Checklist de Recorrido</label>
+                            <div class="dynamic-list" id="checklistItems">
+                                ${['Recorrido Externo', 'Limpieza', 'Dinámicas Comerciales', 'Trastiendas', 'Cajas', 'Visual Merchandising', 'Punto de Venta']
+                                    .map((item, i) => `
+                                        <div class="dynamic-item">
+                                            <input type="checkbox" id="check_${i}">
+                                            <div style="flex: 1;">
+                                                <label for="check_${i}" style="font-weight: 600; margin-bottom: 4px; display: block;">${item}</label>
+                                                <textarea placeholder="Comentarios..." class="comment_${i}" style="width: 100%; font-size: 0.85rem; padding: 6px; border: 1px solid rgba(74, 158, 255, 0.2); border-radius: 4px; background: rgba(15, 23, 42, 0.6); color: #f1f5f9;"></textarea>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Acciones Requeridas</label>
+                            <button type="button" class="btn-secondary mb-2" onclick="window.addRequiredAction()">
+                                <i class="bi bi-plus"></i> Agregar Acción
+                            </button>
+                            <div class="dynamic-list" id="requiredActionsList"></div>
+                        </div>
+                    `;
+                    break;
+
+                case 'seguimiento':
+                    html = `
+                        <div class="form-group">
+                            <label for="uen">UEN</label>
+                            <select id="uen" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Básicos">Básicos</option>
+                                <option value="Carnes">Carnes</option>
+                                <option value="Fruver">Fruver</option>
+                                <option value="Marca Propia">Marca Propia</option>
+                                <option value="PGC">PGC</option>
+                                <option value="SAC">SAC</option>
+                                <option value="Bricolaje">Bricolaje</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="tiendaSeg">Tienda</label>
+                            <select id="tiendaSeg" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Único">Único</option>
+                                <option value="Calle 30">Calle 30</option>
+                                <option value="Soledad">Soledad</option>
+                                <option value="Santo Tomás">Santo Tomás</option>
+                                <option value="Nuestro Atlántico">Nuestro Atlántico</option>
+                                <option value="Alkarawi">Alkarawi</option>
+                                <option value="Boston">Boston</option>
+                                <option value="Villa Campestre">Villa Campestre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fechaSeg">Fecha</label>
+                            <input type="date" id="fechaSeg" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="responsableSeg">Responsable</label>
+                            <input type="text" id="responsableSeg" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="meta">Meta Específica</label>
+                            <textarea id="meta" placeholder="Describa la meta específica"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="resultados">Resultados Obtenidos</label>
+                            <textarea id="resultados" placeholder="Describe los resultados"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="plan">Plan de Mejora</label>
+                            <textarea id="plan" placeholder="Acciones para mejorar"></textarea>
+                        </div>
+                    `;
+                    break;
+
+                case 'ideas':
+                    html = `
+                        <div class="form-group">
+                            <label for="descripcionIdea">Descripción</label>
+                            <textarea id="descripcionIdea" required placeholder="Describa su idea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="impacto">Impacto Estimado</label>
+                            <input type="text" id="impacto" placeholder="Ej: Reducir costos, mejorar ventas">
+                        </div>
+                        <div class="form-group">
+                            <label for="areaIdea">Área</label>
+                            <select id="areaIdea" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Operativa">Operativa</option>
+                                <option value="Comercial">Comercial</option>
+                                <option value="Talento">Talento</option>
+                                <option value="Tecnología">Tecnología</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="implementacion">Implementación</label>
+                            <textarea id="implementacion" placeholder="Cómo implementaría esta idea"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="estado">Estado</label>
+                            <select id="estado" required>
+                                <option value="Borrador">Borrador</option>
+                                <option value="En Revisión">En Revisión</option>
+                                <option value="Aprobada">Aprobada</option>
+                                <option value="En Ejecución">En Ejecución</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="responsableIdea">Responsable</label>
+                            <input type="text" id="responsableIdea" placeholder="Nombre del responsable">
+                        </div>
+                    `;
+                    break;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function addTheme() {
+            const list = document.getElementById('themesList');
+            const id = Date.now();
+            const item = document.createElement('div');
+            item.className = 'dynamic-item';
+            item.innerHTML = `
+                <input type="checkbox" id="theme_${id}">
+                <textarea placeholder="Tema a tratar..." class="theme_${id}"></textarea>
+                <button type="button" class="btn-danger dynamic-item-delete" onclick="this.parentElement.remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            list.appendChild(item);
+        }
+
+        function addAction() {
+            const list = document.getElementById('actionsList');
+            const id = Date.now();
+            const item = document.createElement('div');
+            item.className = 'dynamic-item';
+            item.innerHTML = `
+                <input type="checkbox" id="action_${id}">
+                <textarea placeholder="Acción a realizar..." class="action_${id}"></textarea>
+                <button type="button" class="btn-danger dynamic-item-delete" onclick="this.parentElement.remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            list.appendChild(item);
+        }
+
+        function addRequiredAction() {
+            const list = document.getElementById('requiredActionsList');
+            const id = Date.now();
+            const item = document.createElement('div');
+            item.className = 'dynamic-item';
+            item.innerHTML = `
+                <input type="checkbox" id="reqaction_${id}">
+                <textarea placeholder="Acción requerida..." class="reqaction_${id}"></textarea>
+                <button type="button" class="btn-danger dynamic-item-delete" onclick="this.parentElement.remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            `;
+            list.appendChild(item);
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const type = document.getElementById('taskType').value;
+            if (!type) {
+                showNotification('Por favor seleccione un tipo de tarea', 'error');
+                return;
+            }
+
+            let task = {
+                id: appState.currentEditId || `task_${Date.now()}`,
+                type: type,
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                switch(type) {
+                    case 'reuniones':
+                        if (!document.getElementById('asunto').value.trim()) {
+                            throw new Error('El asunto es requerido');
+                        }
+                        task.subject = document.getElementById('asunto').value;
+                        task.fecha = document.getElementById('fecha').value;
+                        task.hora = document.getElementById('hora').value;
+                        task.asistentes = document.getElementById('asistentes').value;
+                        task.decisiones = document.getElementById('decisiones').value;
+                        
+                        const themes = [];
+                        document.querySelectorAll('#themesList .dynamic-item').forEach(item => {
+                            const text = item.querySelector('textarea').value;
+                            if (text) themes.push(text);
+                        });
+                        task.temas = themes;
+
+                        const actions = [];
+                        document.querySelectorAll('#actionsList .dynamic-item').forEach(item => {
+                            const text = item.querySelector('textarea').value;
+                            if (text) actions.push(text);
+                        });
+                        task.acciones = actions;
+                        break;
+
+                    case 'visita':
+                        if (!document.getElementById('tienda').value) {
+                            throw new Error('Seleccione una tienda');
+                        }
+                        task.tienda = document.getElementById('tienda').value;
+                        task.fecha = document.getElementById('fechaVisita').value;
+                        task.responsable = document.getElementById('responsableVisita').value;
+
+                        const checklist = [];
+                        const items = ['Recorrido Externo', 'Limpieza', 'Dinámicas Comerciales', 'Trastiendas', 'Cajas', 'Visual Merchandising', 'Punto de Venta'];
+                        items.forEach((item, i) => {
+                            const checked = document.getElementById(`check_${i}`).checked;
+                            const comment = document.querySelector(`.comment_${i}`).value;
+                            checklist.push({ item, checked, comment });
+                        });
+                        task.checklist = checklist;
+
+                        const reqActions = [];
+                        document.querySelectorAll('#requiredActionsList .dynamic-item').forEach(item => {
+                            const text = item.querySelector('textarea').value;
+                            if (text) reqActions.push(text);
+                        });
+                        task.accionesRequeridas = reqActions;
+                        break;
+
+                    case 'seguimiento':
+                        task.uen = document.getElementById('uen').value;
+                        task.tienda = document.getElementById('tiendaSeg').value;
+                        task.fecha = document.getElementById('fechaSeg').value;
+                        task.responsable = document.getElementById('responsableSeg').value;
+                        task.meta = document.getElementById('meta').value;
+                        task.resultados = document.getElementById('resultados').value;
+                        task.plan = document.getElementById('plan').value;
+                        break;
+
+                    case 'ideas':
+                        if (!document.getElementById('descripcionIdea').value.trim()) {
+                            throw new Error('La descripción es requerida');
+                        }
+                        task.descripcion = document.getElementById('descripcionIdea').value;
+                        task.impacto = document.getElementById('impacto').value;
+                        task.area = document.getElementById('areaIdea').value;
+                        task.implementacion = document.getElementById('implementacion').value;
+                        task.estado = document.getElementById('estado').value;
+                        task.responsable = document.getElementById('responsableIdea').value;
+                        break;
+                }
+
+                // Guardar o actualizar
+                const existingIndex = appState.tasks.findIndex(t => t.id === task.id);
+                if (existingIndex >= 0) {
+                    appState.tasks[existingIndex] = { ...appState.tasks[existingIndex], ...task };
+                } else {
+                    appState.tasks.push(task);
+                }
+
+                saveTasks();
+                renderBoard();
+                closeTaskModal();
+                showNotification('Tarea guardada exitosamente', 'success');
+
+            } catch (err) {
+                showNotification(err.message, 'error');
+            }
+        }
+
+        function editTask(taskId) {
+            const task = appState.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            appState.currentEditId = taskId;
+            document.getElementById('taskType').value = task.type;
+            document.getElementById('modalTitle').textContent = 'Editar Tarea';
+            updateFormFields();
+
+            // Repoblar campos
+            setTimeout(() => {
+                switch(task.type) {
+                    case 'reuniones':
+                        document.getElementById('asunto').value = task.subject || '';
+                        document.getElementById('fecha').value = task.fecha || '';
+                        document.getElementById('hora').value = task.hora || '';
+                        document.getElementById('asistentes').value = task.asistentes || '';
+                        document.getElementById('decisiones').value = task.decisiones || '';
+                        
+                        (task.temas || []).forEach(tema => {
+                            addTheme();
+                            const textareas = document.querySelectorAll('#themesList textarea');
+                            textareas[textareas.length - 1].value = tema;
+                        });
+
+                        (task.acciones || []).forEach(accion => {
+                            addAction();
+                            const textareas = document.querySelectorAll('#actionsList textarea');
+                            textareas[textareas.length - 1].value = accion;
+                        });
+                        break;
+
+                    case 'visita':
+                        document.getElementById('tienda').value = task.tienda || '';
+                        document.getElementById('fechaVisita').value = task.fecha || '';
+                        document.getElementById('responsableVisita').value = task.responsable || '';
+
+                        (task.checklist || []).forEach((item, i) => {
+                            if (document.getElementById(`check_${i}`)) {
+                                document.getElementById(`check_${i}`).checked = item.checked;
+                                document.querySelector(`.comment_${i}`).value = item.comment || '';
+                            }
+                        });
+
+                        (task.accionesRequeridas || []).forEach(accion => {
+                            addRequiredAction();
+                            const textareas = document.querySelectorAll('#requiredActionsList textarea');
+                            textareas[textareas.length - 1].value = accion;
+                        });
+                        break;
+
+                    case 'seguimiento':
+                        document.getElementById('uen').value = task.uen || '';
+                        document.getElementById('tiendaSeg').value = task.tienda || '';
+                        document.getElementById('fechaSeg').value = task.fecha || '';
+                        document.getElementById('responsableSeg').value = task.responsable || '';
+                        document.getElementById('meta').value = task.meta || '';
+                        document.getElementById('resultados').value = task.resultados || '';
+                        document.getElementById('plan').value = task.plan || '';
+                        break;
+
+                    case 'ideas':
+                        document.getElementById('descripcionIdea').value = task.descripcion || '';
+                        document.getElementById('impacto').value = task.impacto || '';
+                        document.getElementById('areaIdea').value = task.area || '';
+                        document.getElementById('implementacion').value = task.implementacion || '';
+                        document.getElementById('estado').value = task.estado || '';
+                        document.getElementById('responsableIdea').value = task.responsable || '';
+                        break;
+                }
+            }, 100);
+
+            openTaskModal();
+        }
+
+        function deleteTask(taskId) {
+            if (confirm('¿Está seguro de que desea eliminar esta tarea?')) {
+                appState.tasks = appState.tasks.filter(t => t.id !== taskId);
+                saveTasks();
+                renderBoard();
+                showNotification('Tarea eliminada', 'success');
+            }
+        }
+
+        // ========== CONFIGURACIÓN FIREBASE ==========
+        function openFirebaseConfig() {
+            // Cargar valores guardados
+            document.getElementById('apiKey').value = localStorage.getItem('firebase_apiKey') || '';
+            document.getElementById('authDomain').value = localStorage.getItem('firebase_authDomain') || '';
+            document.getElementById('projectId').value = localStorage.getItem('firebase_projectId') || '';
+            document.getElementById('storageBucket').value = localStorage.getItem('firebase_storageBucket') || '';
+            document.getElementById('messagingSenderId').value = localStorage.getItem('firebase_messagingSenderId') || '';
+            document.getElementById('appId').value = localStorage.getItem('firebase_appId') || '';
+
+            document.getElementById('firebaseModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeFirebaseConfig() {
+            document.getElementById('firebaseModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        function saveFirebaseConfig(event) {
+            if (event) event.preventDefault();
+
+            const config = {
+                apiKey: document.getElementById('apiKey').value.trim(),
+                authDomain: document.getElementById('authDomain').value.trim(),
+                projectId: document.getElementById('projectId').value.trim(),
+                storageBucket: document.getElementById('storageBucket').value.trim(),
+                messagingSenderId: document.getElementById('messagingSenderId').value.trim(),
+                appId: document.getElementById('appId').value.trim()
+            };
+
+            console.log('Guardando config:', config);
+
+            // Validar que no estén vacíos
+            if (Object.values(config).some(v => !v)) {
+                showNotification('⚠️ Por favor completa todos los campos', 'error');
+                console.log('Campos vacíos encontrados');
+                return false;
+            }
+
+            // Guardar en localStorage
+            try {
+                localStorage.setItem('firebase_apiKey', config.apiKey);
+                localStorage.setItem('firebase_authDomain', config.authDomain);
+                localStorage.setItem('firebase_projectId', config.projectId);
+                localStorage.setItem('firebase_storageBucket', config.storageBucket);
+                localStorage.setItem('firebase_messagingSenderId', config.messagingSenderId);
+                localStorage.setItem('firebase_appId', config.appId);
+
+                console.log('✓ Configuración guardada');
+                showNotification('✓ Configuración guardada. Recargando...', 'success');
+
+                // Reiniciar la app
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } catch (err) {
+                showNotification('Error al guardar: ' + err.message, 'error');
+                console.error('Error:', err);
+            }
+
+            return false;
+        }
+
+        function updateSyncStatus() {
+            const syncBtn = document.getElementById('syncBtn');
+            if (appState.firebaseInitialized && appState.lastSyncTime) {
+                const now = new Date();
+                const diff = Math.floor((now - appState.lastSyncTime) / 1000);
+                let statusText = 'Sincronizar';
+                if (diff < 60) statusText = 'Hace unos segundos';
+                else if (diff < 3600) statusText = `Hace ${Math.floor(diff / 60)}m`;
+                else statusText = `Hace ${Math.floor(diff / 3600)}h`;
+                
+                syncBtn.title = `Última sincronización: ${statusText}`;
+            }
+        }
+        let isListening = false;
+
+        function toggleVoiceInput() {
+            if (!('webkitSpeechRecognition' in window)) {
+                showNotification('El navegador no soporta reconocimiento de voz', 'error');
+                return;
+            }
+
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'es-CO';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            const btn = document.getElementById('voiceBtn');
+
+            recognition.onstart = () => {
+                isListening = true;
+                btn.style.background = 'rgba(239, 68, 68, 0.8)';
+                btn.innerHTML = '<i class="bi bi-mic-fill"></i> Escuchando...';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript.toLowerCase();
+                
+                openTaskModal();
+
+                // Detectar intención
+                let tipo = '';
+                if (transcript.includes('reunión') || transcript.includes('reunion')) {
+                    tipo = 'reuniones';
+                } else if (transcript.includes('visita') || transcript.includes('tienda')) {
+                    tipo = 'visita';
+                } else if (transcript.includes('seguimiento') || transcript.includes('uen')) {
+                    tipo = 'seguimiento';
+                } else if (transcript.includes('idea')) {
+                    tipo = 'ideas';
+                }
+
+                if (tipo) {
+                    document.getElementById('taskType').value = tipo;
+                    updateFormFields();
+
+                    setTimeout(() => {
+                        // Auto-completar campo principal
+                        if (tipo === 'reuniones' && document.getElementById('asunto')) {
+                            document.getElementById('asunto').value = transcript;
+                        } else if (tipo === 'visita' && document.getElementById('tienda')) {
+                            document.getElementById('tienda').focus();
+                        } else if (tipo === 'ideas' && document.getElementById('descripcionIdea')) {
+                            document.getElementById('descripcionIdea').value = transcript;
+                        }
+                    }, 100);
+                }
+
+                showNotification('Voz capturada: ' + transcript, 'success');
+            };
+
+            recognition.onerror = (event) => {
+                showNotification('Error en reconocimiento de voz: ' + event.error, 'error');
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                btn.style.background = '';
+                btn.innerHTML = '<i class="bi bi-mic"></i> <span class="hidden sm:inline">Voz</span>';
+            };
+
+            recognition.start();
+        }
+
+        // ========== EXPORTACIÓN ==========
+        function exportToExcel() {
+            try {
+                const data = [];
+                appState.tasks.forEach(task => {
+                    const row = {
+                        Tipo: task.type,
+                        Asunto: task.subject || task.descripcion || task.uen || '',
+                        Fecha: task.fecha || '',
+                        Responsable: task.responsable || '',
+                        Estado: task.estado || '',
+                        Creado: new Date(task.createdAt).toLocaleDateString('es-CO')
+                    };
+                    data.push(row);
+                });
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Tareas');
+                XLSX.writeFile(wb, `dashboard_tareas_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+                showNotification('Exportado a Excel exitosamente', 'success');
+            } catch (err) {
+                showNotification('Error al exportar: ' + err.message, 'error');
+            }
+
+            document.querySelector('.dropdown-menu').classList.add('hidden');
+        }
+
+        async function exportToPDF() {
+            try {
+                const element = document.querySelector('main');
+                const canvas = await html2canvas(element, {
+                    backgroundColor: '#0b1120',
+                    scale: 2,
+                    logging: false
+                });
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'px',
+                    format: [canvas.width, canvas.height]
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+                pdf.save(`dashboard_tareas_${new Date().toISOString().split('T')[0]}.pdf`);
+                showNotification('Exportado a PDF exitosamente', 'success');
+            } catch (err) {
+                showNotification('Error al exportar: ' + err.message, 'error');
+            }
+
+            document.querySelector('.dropdown-menu').classList.add('hidden');
+        }
+
+        // ========== SINCRONIZACIÓN ==========
+        function syncCalendar() {
+            if (!appState.firebaseInitialized) {
+                showNotification('⚠️ Firebase no configurado. Ve a Configurar Firebase.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('syncBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> <span class="loading-spinner" style="display: inline-block; margin-left: 6px;"></span>';
+            btn.disabled = true;
+
+            // Forzar sincronización
+            saveTasks();
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                updateSyncStatus();
+                showNotification('✓ Sincronización completada con Firestore', 'success');
+            }, 1500);
+        }
+
+        // ========== UTILIDADES ==========
+        function showNotification(message, type = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notification ${type}`;
+            notif.textContent = message;
+            document.body.appendChild(notif);
+
+            setTimeout(() => {
+                notif.remove();
+            }, 4000);
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Exponer funciones en window
+        window.openTaskModal = openTaskModal;
+        window.closeTaskModal = closeTaskModal;
+        window.updateFormFields = updateFormFields;
+        window.handleFormSubmit = handleFormSubmit;
+        window.editTask = editTask;
+        window.deleteTask = deleteTask;
+        window.addTheme = addTheme;
+        window.addAction = addAction;
+        window.addRequiredAction = addRequiredAction;
+        window.toggleVoiceInput = toggleVoiceInput;
+        window.exportToExcel = exportToExcel;
+        window.exportToPDF = exportToPDF;
+        window.syncCalendar = syncCalendar;
+        window.openFirebaseConfig = openFirebaseConfig;
+        window.closeFirebaseConfig = closeFirebaseConfig;
+        window.saveFirebaseConfig = saveFirebaseConfig;
+    </script>
+</body>
+</html>
