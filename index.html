@@ -860,13 +860,9 @@ service cloud.firestore {
 
         // ========== GESTIÓN DE TAREAS ==========
         function loadTasks() {
-            // SIEMPRE cargar primero desde localStorage (garantizado)
+            // Cargar primero desde localStorage para mostrar algo rápido
             loadFromLocalStorage();
-            
-            // LUEGO: Si Firebase está disponible, sincronizar datos
-            if (appState.firebaseInitialized) {
-                setupFirestoreListener();
-            }
+            // Firebase listener ya se configuró en initializeApp y traerá los datos de la nube
         }
 
         function loadFromLocalStorage() {
@@ -1428,7 +1424,18 @@ service cloud.firestore {
             }
         }
 
-        // ========== CONFIGURACIÓN FIREBASE ==========
+        function updateFirebaseStatus() {
+            const statusEl = document.getElementById('firebaseStatus');
+            if (!statusEl) return;
+
+            if (appState.firebaseInitialized) {
+                statusEl.innerHTML = '<i class="bi bi-cloud-check text-green-400"></i> <span class="text-green-400 text-xs">Sincronizado</span>';
+            } else {
+                statusEl.innerHTML = '<i class="bi bi-cloud-slash text-yellow-400"></i> <span class="text-yellow-400 text-xs">LocalStorage</span>';
+            }
+        }
+
+        // ========== CONFIGURACIÓN FIREBASE (Modal informativo) ==========
         function openFirebaseConfig() {
             // Cargar valores guardados
             document.getElementById('apiKey').value = localStorage.getItem('firebase_apiKey') || '';
