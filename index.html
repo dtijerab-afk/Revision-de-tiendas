@@ -526,7 +526,7 @@
                         <p class="text-xs sm:text-sm text-gray-400">
                             Regional Barranquilla | Megatiendas
                             <span id="firebaseStatus" class="ml-2">
-                                <i class="bi bi-cloud-slash text-red-400"></i> Offline
+                                <i class="bi bi-cloud-slash text-yellow-400"></i> Conectando...
                             </span>
                         </p>
                     </div>
@@ -732,34 +732,25 @@ service cloud.firestore {
             firebaseInitialized: false,
         };
 
-        // Configuración Firebase - REEMPLAZA CON TUS CREDENCIALES
-        // Obtén estas desde: Firebase Console > Proyecto > Configuración > Aplicaciones web
-        const firebaseConfig = {
-            apiKey: localStorage.getItem('firebase_apiKey') || "REEMPLAZA_CON_TU_API_KEY",
-            authDomain: localStorage.getItem('firebase_authDomain') || "REEMPLAZA_CON_TU_AUTH_DOMAIN",
-            projectId: localStorage.getItem('firebase_projectId') || "REEMPLAZA_CON_TU_PROJECT_ID",
-            storageBucket: localStorage.getItem('firebase_storageBucket') || "REEMPLAZA_CON_TU_STORAGE_BUCKET",
-            messagingSenderId: localStorage.getItem('firebase_messagingSenderId') || "REEMPLAZA_CON_TU_MESSAGING_SENDER_ID",
-            appId: localStorage.getItem('firebase_appId') || "REEMPLAZA_CON_TU_APP_ID"
+        // ========== CONFIGURACIÓN FIREBASE (CREDENCIALES FIJAS) ==========
+        // Firebase conecta automáticamente en CUALQUIER dispositivo sin configuración
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyD5Y7Vx1wTDYjcFJlH3b8pEQSyhhMPWdEQ",
+            authDomain: "mi-agenda-180ab.firebaseapp.com",
+            projectId: "mi-agenda-180ab",
+            storageBucket: "mi-agenda-180ab.firebasestorage.app",
+            messagingSenderId: "323883322724",
+            appId: "1:323883322724:web:3063e4b0687e96fb38be71"
         };
 
         let firestoreUnsubscribe = null;
 
         // ========== INICIALIZACIÓN ==========
         window.addEventListener('DOMContentLoaded', () => {
-            checkFirebaseConfig();
             initializeApp();
             setupExportMenu();
             loadTasks();
         });
-
-        function checkFirebaseConfig() {
-            const isConfigured = !firebaseConfig.apiKey.includes('REEMPLAZA_CON');
-            if (!isConfigured) {
-                showNotification('⚠️ Firebase no configurado. Usa el botón Firebase para configurar.', 'error');
-            }
-            updateFirebaseStatus();
-        }
 
         function updateFirebaseStatus() {
             const statusEl = document.getElementById('firebaseStatus');
@@ -774,40 +765,18 @@ service cloud.firestore {
 
         function initializeApp() {
             try {
-                // Cargar configuración de Firebase
-                const apiKey = localStorage.getItem('firebase_apiKey');
-                const authDomain = localStorage.getItem('firebase_authDomain');
-                const projectId = localStorage.getItem('firebase_projectId');
-                
-                // Verificar si Firebase está configurado
-                if (apiKey && !apiKey.includes('REEMPLAZA_CON')) {
-                    // Intentar inicializar Firebase
-                    if (firebase.apps.length === 0) {
-                        firebase.initializeApp({
-                            apiKey: apiKey,
-                            authDomain: authDomain,
-                            projectId: projectId,
-                            storageBucket: localStorage.getItem('firebase_storageBucket'),
-                            messagingSenderId: localStorage.getItem('firebase_messagingSenderId'),
-                            appId: localStorage.getItem('firebase_appId')
-                        });
-                    }
-                    
-                    appState.db = firebase.firestore();
-                    appState.firebaseInitialized = true;
-                    console.log('✓ Firebase inicializado');
-                    setupFirestoreListener();
-                } else {
-                    console.log('Firebase no configurado - usando localStorage');
-                    appState.firebaseInitialized = false;
-                    loadFromLocalStorage();
+                if (firebase.apps.length === 0) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
                 }
+                appState.db = firebase.firestore();
+                appState.firebaseInitialized = true;
+                console.log('✓ Firebase inicializado automáticamente');
+                setupFirestoreListener();
             } catch (err) {
                 console.error('Error inicializando Firebase:', err.message);
                 appState.firebaseInitialized = false;
                 loadFromLocalStorage();
             }
-            
             updateFirebaseStatus();
         }
 
@@ -879,10 +848,11 @@ service cloud.firestore {
         }
 
         function saveTasks() {
+            // Siempre respaldar en localStorage
+            saveToLocalStorage();
+            // Si Firebase está activo, sincronizar a la nube
             if (appState.firebaseInitialized) {
                 saveToFirestore();
-            } else {
-                saveToLocalStorage();
             }
         }
 
