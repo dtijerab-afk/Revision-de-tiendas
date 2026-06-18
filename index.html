@@ -216,16 +216,24 @@
     <div class="modal-overlay" id="visitModal">
         <div class="modal-content">
             <div class="flex items-center justify-between mb-5">
-                <h2 class="text-xl font-bold text-primary-300" id="modalTitle">Nueva Visita</h2>
+                <div class="flex items-center gap-3">
+                    <button onclick="window.closeVisitModal()" class="btn-secondary" style="padding:8px 14px;" title="Volver al tablero">
+                        <i class="bi bi-arrow-left"></i> Atrás
+                    </button>
+                    <h2 class="text-xl font-bold text-primary-300" id="modalTitle">Nueva Visita</h2>
+                </div>
                 <button onclick="window.closeVisitModal()" class="text-gray-400 hover:text-primary-300 transition">
                     <i class="bi bi-x-lg text-xl"></i>
                 </button>
+            </div>
+            <div id="autoSaveIndicator" style="font-size:0.78rem; color:#86efac; font-weight:600; margin-bottom:14px; text-align:right;">
+                <i class="bi bi-cloud-check"></i> Guardado automático activo
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="form-group">
                     <label for="tienda">Tienda</label>
-                    <select id="tienda" required>
+                    <select id="tienda" onchange="window.autoSaveDraft()" required>
                         <option value="">-- Seleccionar --</option>
                         <option value="Único">Único</option>
                         <option value="Calle 30">Calle 30</option>
@@ -239,11 +247,11 @@
                 </div>
                 <div class="form-group">
                     <label for="fechaVisita">Fecha de visita</label>
-                    <input type="date" id="fechaVisita" required>
+                    <input type="date" id="fechaVisita" onchange="window.autoSaveDraft()" required>
                 </div>
                 <div class="form-group">
                     <label for="responsable">Administrador</label>
-                    <input type="text" id="responsable" placeholder="Nombre">
+                    <input type="text" id="responsable" oninput="window.autoSaveDraft()" placeholder="Nombre">
                 </div>
             </div>
 
@@ -278,10 +286,15 @@
             appId: "1:323883322724:web:3063e4b0687e96fb38be71"
         };
 
-        // Los 10 aspectos del recorrido
+        // Los aspectos del recorrido
         const ASPECTOS = [
-            'Recorrido Externo', 'Limpieza', 'Dinámicas Comerciales', 'Trastienda',
-            'Bodega', 'Cajas', 'Carnes', 'Fruver', 'SAC', 'Cafetería'
+            'Recorrido Externo',
+            'Recorrido Interno (todas las áreas)',
+            'Limpieza Piso de Venta',
+            'Dinámicas Comerciales',
+            'Trastienda',
+            'Bodegas',
+            'Cavas'
         ];
 
         // Las 8 tiendas
@@ -418,20 +431,18 @@
             card.className = 'visit-card';
 
             const conObs = (v.aspectos || []).filter(a => a.observacion && a.observacion.trim()).length;
-            const conFecha = (v.aspectos || []).filter(a => a.fechaEjecucion).length;
 
             let html = `<div class="visit-meta">`;
             if (v.fecha) html += `<span><i class="bi bi-calendar"></i> ${v.fecha}</span>`;
             if (v.responsable) html += `<span><i class="bi bi-person"></i> ${escapeHtml(v.responsable)}</span>`;
             html += `</div>`;
             html += `<div class="visit-summary">
-                <span><b>${conObs}</b> obs.</span>
-                <span class="ok"><i class="bi bi-calendar-check"></i> ${conFecha}</span>
+                <span><b>${conObs}</b> observación(es)</span>
             </div>`;
 
             html += `<div class="visit-actions">
-                <button class="btn-secondary visit-btn" onclick="window.editVisit('${v.id}')"><i class="bi bi-pencil"></i></button>
-                <button class="btn-secondary visit-btn" onclick="window.exportVisitPDF('${v.id}')"><i class="bi bi-file-pdf"></i> PDF</button>
+                <button class="btn-secondary visit-btn" onclick="window.editVisit('${v.id}')"><i class="bi bi-pencil"></i> Editar</button>
+                <button class="btn-primary visit-btn" onclick="window.exportVisitPDF('${v.id}')"><i class="bi bi-file-pdf"></i> PDF</button>
                 <button class="btn-danger visit-btn" onclick="window.deleteVisit('${v.id}')"><i class="bi bi-trash"></i></button>
             </div>`;
 
@@ -446,7 +457,10 @@
             document.getElementById('tienda').value = '';
             document.getElementById('fechaVisita').value = new Date().toISOString().slice(0, 10);
             document.getElementById('responsable').value = '';
+            window.__notasTemp = '';
             renderAspectos([]);
+            const ind = document.getElementById('autoSaveIndicator');
+            if (ind) { ind.innerHTML = '<i class="bi bi-cloud-check"></i> Guardado automático activo'; ind.style.color = '#86efac'; }
             document.getElementById('visitModal').classList.add('active');
             document.body.style.overflow = 'hidden';
         }
@@ -463,34 +477,83 @@
             ASPECTOS.forEach((nombre, i) => {
                 const data = saved.find(a => a.nombre === nombre) || {};
                 const obs = data.observacion ? escapeHtml(data.observacion) : '';
-                const fecha = data.fechaEjecucion || '';
                 html += `
                 <div class="aspecto-item">
                     <div class="aspecto-head">
                         <span class="aspecto-nombre"><i class="bi bi-geo-alt"></i> ${nombre}</span>
                     </div>
                     <div class="aspecto-fields">
-                        <textarea id="asp_obs_${i}" placeholder="Observación sobre ${nombre.toLowerCase()}...">${obs}</textarea>
-                        <div class="aspecto-fecha-wrap">
-                            <label for="asp_fecha_${i}"><i class="bi bi-calendar-check"></i> Fecha de ejecución:</label>
-                            <input type="date" id="asp_fecha_${i}" value="${fecha}">
-                        </div>
+                        <textarea id="asp_obs_${i}" oninput="window.autoSaveDraft()" placeholder="Observación sobre ${nombre.toLowerCase()}..."></textarea>
                     </div>
                 </div>`;
             });
-            // Campo de notas adicionales al final
-            const notas = (saved.__notas !== undefined) ? '' : '';
             html += `
                 <div class="aspecto-item" style="border-color: rgba(245, 158, 11, 0.3);">
                     <div class="aspecto-head">
                         <span class="aspecto-nombre" style="color:#fbbf24;"><i class="bi bi-journal-text"></i> Notas adicionales</span>
                     </div>
                     <div class="aspecto-fields">
-                        <textarea id="notasAdicionales" placeholder="Observaciones generales, compromisos, comentarios extra...">${window.__notasTemp || ''}</textarea>
+                        <textarea id="notasAdicionales" oninput="window.autoSaveDraft()" placeholder="Observaciones generales, compromisos, comentarios extra...">${window.__notasTemp || ''}</textarea>
                     </div>
                 </div>`;
             cont.innerHTML = html;
+            // Rellenar las observaciones (evita problemas de comillas en el HTML)
+            ASPECTOS.forEach((nombre, i) => {
+                const data = saved.find(a => a.nombre === nombre) || {};
+                const el = document.getElementById(`asp_obs_${i}`);
+                if (el && data.observacion) el.value = data.observacion;
+            });
             window.__notasTemp = '';
+        }
+
+        // ====== AUTOGUARDADO ======
+        // Guarda un borrador cada vez que escribes, sin cerrar el formulario.
+        // Si la app se cierra, al reabrir la visita todo sigue ahí.
+        let autoSaveTimer = null;
+        function autoSaveDraft() {
+            // Muestra indicador "guardando..."
+            const ind = document.getElementById('autoSaveIndicator');
+            if (ind) { ind.textContent = '✍️ Escribiendo...'; ind.style.color = '#fbbf24'; }
+
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                doAutoSave();
+                if (ind) { ind.textContent = '✓ Guardado automático'; ind.style.color = '#86efac'; }
+            }, 800); // guarda 0.8s después de que dejas de escribir
+        }
+
+        function doAutoSave() {
+            const tienda = document.getElementById('tienda').value;
+            if (!tienda) return; // no guarda sin tienda
+
+            const aspectos = ASPECTOS.map((nombre, i) => {
+                const obsEl = document.getElementById(`asp_obs_${i}`);
+                return {
+                    nombre,
+                    observacion: obsEl ? obsEl.value.trim() : ''
+                };
+            });
+            const notasEl = document.getElementById('notasAdicionales');
+
+            const visit = {
+                id: appState.currentEditId || `visita_${Date.now()}`,
+                tienda,
+                fecha: document.getElementById('fechaVisita').value,
+                responsable: document.getElementById('responsable').value.trim(),
+                aspectos,
+                notas: notasEl ? notasEl.value.trim() : '',
+                createdAt: appState.currentEditId ? undefined : new Date().toISOString()
+            };
+
+            // Si era nueva, ahora pasa a tener ID fijo para seguir editándola
+            if (!appState.currentEditId) appState.currentEditId = visit.id;
+
+            const idx = appState.visits.findIndex(v => v.id === visit.id);
+            if (idx >= 0) appState.visits[idx] = { ...appState.visits[idx], ...visit };
+            else appState.visits.push(visit);
+
+            saveVisits();
+            renderBoard();
         }
 
         function saveVisit() {
@@ -499,8 +562,7 @@
 
             const aspectos = ASPECTOS.map((nombre, i) => ({
                 nombre,
-                observacion: document.getElementById(`asp_obs_${i}`).value.trim(),
-                fechaEjecucion: document.getElementById(`asp_fecha_${i}`).value
+                observacion: document.getElementById(`asp_obs_${i}`).value.trim()
             }));
 
             const notas = document.getElementById('notasAdicionales').value.trim();
@@ -550,6 +612,7 @@
         }
 
         // ====== EXPORTAR EXCEL ======
+        // ====== EXCEL GENERAL (todas las visitas) ======
         function exportToExcel() {
             try {
                 const rows = [];
@@ -561,15 +624,14 @@
                             rows.push({
                                 'Tienda': v.tienda || '', 'Fecha Visita': v.fecha || '',
                                 'Administrador': v.responsable || '',
-                                'Aspecto': '(Sin observaciones)', 'Observación': '', 'Fecha Ejecución': ''
+                                'Aspecto': '(Sin observaciones)', 'Observación': '', 'Respuesta Admin': ''
                             });
                         } else {
                             conObs.forEach(a => {
                                 rows.push({
                                     'Tienda': v.tienda || '', 'Fecha Visita': v.fecha || '',
                                     'Administrador': v.responsable || '',
-                                    'Aspecto': a.nombre, 'Observación': a.observacion || '',
-                                    'Fecha Ejecución': a.fechaEjecucion || ''
+                                    'Aspecto': a.nombre, 'Observación': a.observacion || '', 'Respuesta Admin': ''
                                 });
                             });
                         }
@@ -577,13 +639,13 @@
                             rows.push({
                                 'Tienda': v.tienda || '', 'Fecha Visita': v.fecha || '',
                                 'Administrador': v.responsable || '',
-                                'Aspecto': 'NOTAS ADICIONALES', 'Observación': v.notas, 'Fecha Ejecución': ''
+                                'Aspecto': 'NOTAS ADICIONALES', 'Observación': v.notas, 'Respuesta Admin': ''
                             });
                         }
                     });
                 if (!rows.length) { showNotification('No hay visitas para exportar', 'error'); return; }
                 const ws = XLSX.utils.json_to_sheet(rows);
-                ws['!cols'] = [{wch:18},{wch:12},{wch:18},{wch:22},{wch:50},{wch:15}];
+                ws['!cols'] = [{wch:18},{wch:12},{wch:18},{wch:28},{wch:50},{wch:40}];
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, 'Visitas');
                 XLSX.writeFile(wb, `visitas_megatiendas_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -614,7 +676,7 @@
                 doc.setFontSize(9);
                 doc.text('Generado: ' + new Date().toLocaleDateString('es-CO'), pageW - marginX, 21, { align: 'right' });
 
-                // ===== Datos generales (recuadro) =====
+                // ===== Datos generales =====
                 y = 38;
                 doc.setFillColor(240, 244, 248);
                 doc.roundedRect(marginX, y, pageW - marginX * 2, 22, 2, 2, 'F');
@@ -626,7 +688,7 @@
                 doc.text(`Administrador: ${v.responsable || '—'}`, pageW / 2, y + 12);
                 y += 30;
 
-                // ===== Tabla de observaciones =====
+                // ===== Tabla de observaciones con espacio de respuesta =====
                 const conObs = (v.aspectos || []).filter(a => a.observacion && a.observacion.trim());
 
                 doc.setFontSize(12); doc.setFont(undefined, 'bold');
@@ -637,42 +699,50 @@
                     doc.setFontSize(10); doc.setFont(undefined, 'italic'); doc.setTextColor(120, 120, 120);
                     doc.text('Sin observaciones registradas en este recorrido.', marginX, y + 4); y += 12;
                 } else {
-                    // Cabecera de tabla
                     const colAsp = marginX;
-                    const colObs = marginX + 42;
-                    const colFecha = pageW - marginX - 26;
+                    const colObs = marginX + 40;
+                    const colResp = marginX + 115;
+                    const tableRight = pageW - marginX;
                     y += 2;
+                    // Cabecera
                     doc.setFillColor(42, 90, 143);
                     doc.rect(marginX, y, pageW - marginX * 2, 8, 'F');
                     doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont(undefined, 'bold');
                     doc.text('ASPECTO', colAsp + 2, y + 5.5);
-                    doc.text('OBSERVACIÓN', colObs + 2, y + 5.5);
-                    doc.text('EJECUCIÓN', colFecha, y + 5.5);
+                    doc.text('OBSERVACIÓN (Auditor)', colObs + 2, y + 5.5);
+                    doc.text('RESPUESTA DEL ADMIN.', colResp + 2, y + 5.5);
                     y += 8;
 
                     let alt = false;
                     conObs.forEach(a => {
-                        const obsLines = doc.splitTextToSize(a.observacion, colFecha - colObs - 4);
-                        const rowH = Math.max(obsLines.length * 4.5 + 4, 10);
+                        const obsLines = doc.splitTextToSize(a.observacion, colResp - colObs - 4);
+                        // altura mínima para que el admin tenga espacio de escribir
+                        const rowH = Math.max(obsLines.length * 4.5 + 6, 22);
 
                         if (y + rowH > 280) { doc.addPage(); y = 18; }
 
-                        // fondo alterno
                         if (alt) { doc.setFillColor(245, 248, 252); doc.rect(marginX, y, pageW - marginX * 2, rowH, 'F'); }
                         alt = !alt;
 
+                        // bordes de columnas
+                        doc.setDrawColor(210, 220, 232); doc.setLineWidth(0.1);
+                        doc.line(colObs, y, colObs, y + rowH);
+                        doc.line(colResp, y, colResp, y + rowH);
+
                         doc.setTextColor(30, 41, 59); doc.setFontSize(9); doc.setFont(undefined, 'bold');
-                        const aspLines = doc.splitTextToSize(a.nombre, 38);
+                        const aspLines = doc.splitTextToSize(a.nombre, 36);
                         aspLines.forEach((ln, i) => doc.text(ln, colAsp + 2, y + 5 + i * 4.5));
 
                         doc.setFont(undefined, 'normal'); doc.setTextColor(60, 60, 60);
                         obsLines.forEach((ln, i) => doc.text(ln, colObs + 2, y + 5 + i * 4.5));
 
-                        doc.setTextColor(163, 45, 45); doc.setFont(undefined, 'bold'); doc.setFontSize(8.5);
-                        doc.text(a.fechaEjecucion || '—', colFecha, y + 5);
+                        // columna de respuesta: líneas tenues para escribir
+                        doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.1);
+                        for (let ly = y + 8; ly < y + rowH - 2; ly += 6) {
+                            doc.line(colResp + 2, ly, tableRight - 2, ly);
+                        }
 
-                        // línea separadora
-                        doc.setDrawColor(220, 228, 238); doc.setLineWidth(0.1);
+                        doc.setDrawColor(210, 220, 232);
                         doc.line(marginX, y + rowH, pageW - marginX, y + rowH);
                         y += rowH;
                     });
@@ -693,14 +763,15 @@
                     y += boxH + 8;
                 }
 
-                // ===== Pie con espacio de respuesta =====
-                if (y > 250) { doc.addPage(); y = 18; }
-                doc.setDrawColor(74, 158, 255); doc.setLineWidth(0.3);
-                doc.line(marginX, y, pageW - marginX, y); y += 6;
-                doc.setFontSize(9); doc.setFont(undefined, 'bold'); doc.setTextColor(42, 90, 143);
-                doc.text('Respuesta del administrador (acciones realizadas):', marginX, y); y += 4;
-                doc.setDrawColor(180, 190, 200); doc.setLineWidth(0.1);
-                for (let i = 0; i < 3; i++) { y += 7; doc.line(marginX, y, pageW - marginX, y); }
+                // ===== Firma =====
+                if (y > 255) { doc.addPage(); y = 18; }
+                y += 6;
+                doc.setDrawColor(120, 120, 120); doc.setLineWidth(0.2);
+                doc.line(marginX, y, marginX + 70, y);
+                doc.line(pageW - marginX - 70, y, pageW - marginX, y);
+                doc.setFontSize(8.5); doc.setFont(undefined, 'normal'); doc.setTextColor(90, 90, 90);
+                doc.text('Auditor / Jefe de Operaciones', marginX, y + 5);
+                doc.text('Administrador de tienda', pageW - marginX - 70, y + 5);
 
                 doc.save(`Visita_${(v.tienda || '').replace(/\s+/g,'_')}_${v.fecha || ''}.pdf`);
                 showNotification('PDF generado');
@@ -741,6 +812,7 @@
         window.saveVisit = saveVisit;
         window.editVisit = editVisit;
         window.deleteVisit = deleteVisit;
+        window.autoSaveDraft = autoSaveDraft;
         window.exportToExcel = exportToExcel;
         window.exportVisitPDF = exportVisitPDF;
         window.exportBoardPDF = exportBoardPDF;
