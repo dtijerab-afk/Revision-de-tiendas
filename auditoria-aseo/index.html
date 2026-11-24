@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auditoría de Aseo | Megatiendas</title>
+<style>
+:root{--blue:#0B3A82;--red:#D71920;--bg:#F3F5F9;--line:#DCE2EC;--ink:#202938;--muted:#667085;--green:#16834a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px Arial,sans-serif}.app{max-width:760px;margin:auto;padding-bottom:40px}
+header{background:var(--blue);color:white;padding:22px 18px;border-bottom:5px solid var(--red)}header strong{font-size:13px;letter-spacing:2px}h1{font-size:27px;margin:8px 0 4px}header p{margin:0;opacity:.9}
+main{padding:12px}.card,.question{background:white;border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}.card h2{font-size:18px;color:var(--blue);margin:0 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}input,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit}textarea{min-height:75px}
+.sticky{position:sticky;top:0;background:#072A60;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:14px;z-index:3}.score{font-size:28px;font-weight:bold;min-width:85px}.track{height:9px;background:#40516c;border-radius:9px;overflow:hidden;flex:1}.fill{height:100%;width:0;background:#30b36b}
+.qhead{display:flex;gap:10px}.n{font-size:23px;font-weight:bold;color:var(--red)}.qtitle{font-weight:bold;line-height:1.35}.choices{display:flex;gap:8px;margin-top:14px}.choices button{flex:1;padding:11px 6px;border:2px solid var(--line);border-radius:8px;background:#fff;font-weight:bold;cursor:pointer}.choices button.active.si{background:var(--green);border-color:var(--green);color:white}.choices button.active.no{background:var(--red);border-color:var(--red);color:white}.choices button.active.na{background:#667085;border-color:#667085;color:white}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.actions button{padding:14px;border:0;border-radius:9px;background:var(--blue);color:white;font-weight:bold;font-size:15px;cursor:pointer}.actions button.secondary{background:#394150}.note{color:var(--muted);font-size:13px}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.card,.question{padding:13px}.choices button{font-size:14px}}
+@media print{.sticky,.actions,.choices{display:none!important}body{background:white}.app{max-width:none}}
+</style></head>
+<body><div class="app">
+<header><strong>MEGATIENDAS · CONTROL OPERACIONAL</strong><h1>Auditoría de Aseo</h1><p>Lista de verificación de higiene, limpieza y saneamiento</p></header>
+<div class="sticky"><div class="score"><span id="score">0</span><small>/100</small></div><div style="flex:1"><div class="track"><div class="fill" id="fill"></div></div><div id="status" style="font-size:12px;margin-top:5px">Pendiente de evaluación</div></div></div>
+<main>
+<section class="card"><h2>Datos de la inspección</h2><div class="grid">
+<div><label for="sede">Sede</label><input id="sede" placeholder="Nombre de la tienda"></div>
+<div><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
+<div><label for="admin">Administrador</label><input id="admin" placeholder="Nombre del administrador"></div>
+<div><label for="auditor">Responsable de inspección</label><input id="auditor" value="Coordinador de Aseo"></div>
+<div><label for="hora">Hora de inspección</label><input id="hora" type="time"></div>
+</div></section>
+<section class="card"><h2>Lista de verificación · 10 puntos</h2><p class="note">Seleccione Cumple, No cumple o N/A. Cada punto aplicable vale 10 puntos ponderados proporcionalmente al total aplicable.</p><div id="questions"></div></section>
+<section class="card"><h2>Hallazgos y acciones correctivas</h2><label for="hallazgos">Hallazgos identificados</label><textarea id="hallazgos"></textarea><label for="acciones">Acciones correctivas requeridas</label><textarea id="acciones"></textarea><div class="grid"><div><label for="responsable">Responsable de la corrección</label><input id="responsable"></div><div><label for="limite">Fecha límite</label><input id="limite" type="date"></div></div></section>
+<section class="card"><h2>Compromiso y firmas</h2><p class="note">La administración de la sede y el personal responsable se comprometen a gestionar las acciones correctivas identificadas durante la auditoría.</p><div class="grid"><div><label for="firmaAdmin">Firma / nombre del administrador</label><input id="firmaAdmin"></div><div><label for="firmaAseo">Firma / nombre del Coordinador de Aseo</label><input id="firmaAseo"></div></div></section>
+<section class="card"><h2>Resultado</h2><div id="result" style="font-size:20px;font-weight:bold">0% · Sin evaluar</div><p class="note">Excelente: 90–100% · Bueno: 80–89% · Aceptable: 70–79% · Deficiente: menos de 70%.</p></section>
+<div class="actions"><button onclick="window.print()">Imprimir / Guardar PDF</button><button class="secondary" onclick="saveData()">Guardar en este dispositivo</button><button class="secondary" onclick="shareData()">Compartir resumen</button><button class="secondary" onclick="resetForm()">Limpiar formulario</button></div>
+<p class="note">Los registros guardados se conservan únicamente en el navegador y dispositivo donde se diligencian. Esta versión pública no centraliza automáticamente las auditorías.</p>
+</main></div>
+<script>
+const items=[
+["Presentación del personal","¿El personal cuenta con uniforme completo, botas limpias, elementos de protección personal (EPP) y adecuada presentación personal?"],
+["Limpieza de pisos","¿Los pisos se encuentran libres de suciedad, residuos, grasa, manchas, malos olores y acumulación de agua?"],
+["Estanterías, góndolas y muebles de fruver","¿Las estanterías, góndolas y muebles de fruver están limpios, incluyendo estructuras, entrepaños, esquinas, partes superiores e inferiores y zonas de difícil acceso?"],
+["Neveras y equipos de refrigeración","¿Se cumplen las jornadas de lavado y limpieza interna y externa de las neveras, sin presencia de residuos y garantizando la conservación de los productos?"],
+["Canastillas y elementos de almacenamiento","¿Las canastillas reciben lavado periódico, mínimo cada 15 días, y se encuentran libres de residuos orgánicos y en condiciones adecuadas de higiene?"],
+["Baños y zonas comunes","¿Los sanitarios, lavamanos, espejos, paredes, pisos y dispensadores están limpios y cuentan con los insumos necesarios?"],
+["Manejo de residuos sólidos","¿Las canecas están limpias, cuentan con bolsas adecuadas, permiten la separación de residuos y se evacúan oportunamente, sin generar malos olores?"],
+["Control integrado de plagas (MIP)","¿La sede está libre de evidencias de cucarachas, roedores, excrementos e insectos, cuenta con cebaderos identificados y cumple las jornadas programadas de control de plagas?"],
+["Elementos, maquinaria e insumos de aseo","¿Se dispone de los elementos e insumos necesarios, almacenados organizadamente, y las brilladoras, exprimidores y señalizaciones se encuentran en buen estado?"],
+["Cumplimiento de programación y supervisión","¿Se ejecutan las rutinas de aseo, lavado de neveras, fumigaciones, desratización y demás actividades programadas, con sus respectivos soportes?"]
+];
+const answers=Array(10).fill("");
+const root=document.getElementById("questions");
+items.forEach((it,i)=>{const el=document.createElement("article");el.className="question";el.innerHTML='<div class="qhead"><div class="n">'+(i+1)+'</div><div><div class="qtitle"></div><div class="note"></div></div></div><div class="choices"><button type="button" data-v="si">Cumple</button><button type="button" data-v="no">No cumple</button><button type="button" data-v="na">N/A</button></div>';el.querySelector(".qtitle").textContent=it[0];el.querySelector(".note").textContent=it[1];el.querySelectorAll("button").forEach(b=>b.onclick=()=>{answers[i]=b.dataset.v;el.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));b.classList.add(b.dataset.v);update()});root.appendChild(el)});
+function update(){const applicable=answers.filter(x=>x!=="na"&&x!=="").length;const yes=answers.filter(x=>x==="si").length;const score=applicable?Math.round(yes/applicable*100):0;document.getElementById("score").textContent=score;document.getElementById("fill").style.width=score+"%";document.getElementById("status").textContent=answers.filter(Boolean).length+" de 10 puntos respondidos";let level=applicable===0?"Sin evaluar":score>=90?"Excelente":score>=80?"Bueno":score>=70?"Aceptable":"Deficiente – Requiere intervención";document.getElementById("result").textContent=applicable?score+"% · "+level:"Sin evaluar"}
+function collect(){const data={};["sede","fecha","admin","auditor","hora","hallazgos","acciones","responsable","limite","firmaAdmin","firmaAseo"].forEach(id=>data[id]=document.getElementById(id).value);data.answers=answers;data.score=document.getElementById("score").textContent;return data}
+function saveData(){localStorage.setItem("auditoriaAseoMegatiendas",JSON.stringify(collect()));alert("Auditoría guardada en este dispositivo.");}
+function shareData(){const d=collect();const txt="Auditoría de Aseo · Megatiendas\nSede: "+d.sede+"\nFecha: "+d.fecha+"\nResultado: "+d.score+"%\nAdministrador: "+d.admin+"\nAuditor: "+d.auditor+"\nRespuestas: "+d.answers.map((a,i)=>(i+1)+": "+(a||"Pendiente")).join("\n");if(navigator.share)navigator.share({title:"Auditoría de Aseo",text:txt});else if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>alert("Resumen copiado."));else alert(txt)}
+function resetForm(){if(!confirm("¿Desea limpiar todos los datos de esta auditoría?"))return;document.querySelectorAll("input,textarea").forEach(x=>x.value="");answers.fill("");document.querySelectorAll(".choices button").forEach(x=>x.className="");update()}
+document.getElementById("fecha").value=new Date().toISOString().slice(0,10);update();
+</script></body></html>
